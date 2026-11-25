@@ -1,0 +1,50 @@
+name: Deploy Rustube to Cloudflare Pages
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - '.github/workflows/deploy-cloudflare-pages.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout website
+        uses: actions/checkout@v4
+
+      - name: Prepare Pages output
+        run: |
+          mkdir -p public
+          cp index.html public/index.html
+
+      - name: Download Android APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Rustube-apk
+          path: public
+          repository: cuxam8009-byte/Rustube
+          run-id: 45696947676
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify deploy files
+        run: |
+          test -s public/index.html
+          test -s public/Rustube.apk
+          ls -lh public
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: rustube
+          directory: public
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          branch: main
